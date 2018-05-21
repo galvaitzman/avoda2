@@ -512,6 +512,7 @@ class Hash:
         self.headSize = -1
         self.numberOfRowsInFile = 0
         self.numberOfColumnsInFile = 0
+        self.sourceFile=""
     def create(self, source_file, col_name):
         """
         :param source_file: name of file to create from. example: kiva.txt
@@ -529,27 +530,27 @@ class Hash:
         653088|12,653048|10,653078|8,1080148|6,653068|3,
         653089|13,
         """
-        arr=[]
+
         self.rowSize = self.getRowSize(source_file, 1)
         self.headSize = self.getRowSize(source_file, 0)
+        self.sourceFile = source_file
         sourceFile = open(source_file,"r")
         myFile = open(self.file.name,"r+")
-        myFile.write(sourceFile.readline())
         self.numberOfColumnsInFile = len(sourceFile.readline().split(','))
-        self.col_index = self.fieldIndex(self.col_name)
+        self.col_index = self.fieldIndex(self.col_name, source_file)
+        sourceFile.seek(self.headSize,0)
         line = sourceFile.readline()
-        value = line.split(',')[self.col_index]
-        counter=0
-        hashIndex=0
-        while counter < self.numberOfBuckets:
-            myFile.write("\r\n")
+        counter=1
+        while counter <= self.numberOfBuckets:
+            myFile.write(str(counter) + "\n")
+            counter+=1
+        counter=1
+        myFile.close()
         while line and len(line)>2:
-            if self.col_index == 2 or self.col_index == 3:
-                hashIndex = int(value[0]) % self.numberOfBuckets
-
-
-
-
+            value = line.split(',')[self.col_index]
+            self.add(value,counter)
+            counter += 1
+            line = sourceFile.readline()
 
     def getRowSize(self, source_file, index):
         file = open(source_file, "r")
@@ -562,11 +563,11 @@ class Hash:
             return len(line1)
         return
 
-    def fieldIndex(self, col_name):
+    def fieldIndex(self, col_name, sourceFile):
         """
         function to find the index of the col name
         """
-        file = open(self.file.name, "r")
+        file = open(sourceFile, "r")
         line = file.readline()
         lineSplit = line.split(',')
         currentFieldIndex = 0
@@ -576,12 +577,57 @@ class Hash:
             currentFieldIndex += 1
         file.close()
         return currentFieldIndex
+
     def add(self, value, ptr):
         """
         The function insert <value|ptr> to hash table according to the result of the hash function on value.
         :param value: the value of col_name of the new instance.
         :param ptr: the row number of the new instance in the heap file.
         """
+        hashIndex=0
+        if self.col_index == 2 or self.col_index == 3:
+            hashIndex = int(value[0]) % self.numberOfBuckets + 1
+        else:
+            hashIndex = int(value) % self.numberOfBuckets + 1
+        file = open(self.file.name,"r+")
+        addToLine = str(value) + "|" + str(ptr) + ","
+        lineToWrite = ""
+        counter = 1
+        found = False
+        counterForSeek = 0
+        lineToOverride = ""
+        while found is False:
+            if counter == hashIndex:
+                found = True
+                lineToOverride = file.readline()
+                if "|" not in lineToOverride:
+                    lineToWrite = addToLine + "\n"
+                else:
+                    lineToWrite = addToLine + lineToOverride
+            else:
+                lineToOverride = file.readline()
+                counter += 1
+                counterForSeek += len(lineToOverride)
+        file.seek(counterForSeek)
+        file.readline()
+        lengthToKeep = len(lineToWrite) - len(lineToOverride)
+        counter=0
+        firstTime = True
+        lineToKeep = "a"
+        while len (lineToKeep) > 0:
+            counterForKeep=0
+            lineToKeep = ""
+            while counterForKeep < lengthToKeep:
+                lineToKeep = lineToKeep + file.read(1)
+                counterForKeep+=1
+            file.seek(counterForSeek)
+            file.write(lineToWrite)
+            if firstTime:
+                counterForSeek = counterForSeek + len(lineToWrite)
+                firstTime = False
+            else:
+                counterForSeek = counterForSeek + counterForKeep
+            lineToWrite = lineToKeep
 
 
     def remove(self, value, ptr):
@@ -590,18 +636,37 @@ class Hash:
         :param value: the value of col_name.
         :param ptr: the row number of the instance in the heap file.
         """
+        file = open(self.sourceFile,"r+")
+        file.seek(self.headSize+self.rowSize*(ptr-1))
+        file.write('#')
+        file.close()
+        hashIndex = 0
+        file = open(self.file.name,"r+")
+        if self.col_index == 2 or self.col_index == 3:
+            hashIndex = int(value[0]) % self.numberOfBuckets + 1
+        else:
+            hashIndex = int(value) % self.numberOfBuckets + 1
+        counter=0
+        seekRow=0
+        while counter<hashIndex-1:
+            x = file.readline()
+            counter+=1
+
+        lineSplit = file.readline().split(',')
+        for line in lineSplit:
+            if ()
+
+
 
 if __name__ == '__main__':
 
   # heap = Heap("heap_for_hash.txt")
-  hash = Hash('hash_file.txt', 10)
-  print(10%3)
-  #hash.create('fixed_kiva_loans.txt', 'lid')
-  #f=open("hash_file.txt","r").readlines()
-  #x=1
+  hash = Hash('hash_file.txt', 20)
+  hash.create('fixed_kiva_loans.txt', 'lid')
+
   # heap.create('kiva.txt');
 
-
   # heap.insert('653207,1500.0,USD,Agriculture')
-  # hash.add('653207','11')
+  hash.add('653207','11')
+
 
